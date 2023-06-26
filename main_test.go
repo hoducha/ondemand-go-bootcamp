@@ -1,9 +1,12 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/hoducha/ondemand-go-bootcamp/repositories"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +21,11 @@ type PokemonTestSuite struct {
 }
 
 func (suite *PokemonTestSuite) SetupTest() {
-	suite.router = setupRouter(testDataFile)
+	repo, err := repositories.NewPokemonRepository(testDataFile)
+	if err != nil {
+		log.Fatalf("Failed to initialize Pokemon repository: %v", err)
+	}
+	suite.router = setupRouter(repo)
 }
 
 func (suite *PokemonTestSuite) TestGetPokemonByID() {

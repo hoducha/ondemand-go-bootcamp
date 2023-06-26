@@ -10,14 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func setupRouter(dataFile string) *gin.Engine {
-	pokemonRepo, err := repositories.NewPokemonRepository(dataFile)
-	if err != nil {
-		log.Fatalf("Failed to initialize Pokemon repository: %v", err)
-	}
-
+func setupRouter(repo repositories.PokemonRepository) *gin.Engine {
 	router := gin.Default()
-	api.SetupRoutes(router, pokemonRepo)
+	api.SetupRoutes(router, repo)
 
 	return router
 }
@@ -27,8 +22,13 @@ func main() {
 		log.Fatalf("Usage: %s <pokemon.csv>", os.Args[0])
 	}
 	dataFile := os.Args[1]
+
+	repo, err := repositories.NewPokemonRepository(dataFile)
+	if err != nil {
+		log.Fatalf("Failed to initialize Pokemon repository: %v", err)
+	}
 		
-	router := setupRouter(dataFile)
+	router := setupRouter(repo)
 
 	log.Fatal(router.Run(":8080"))
 }
