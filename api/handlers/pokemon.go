@@ -4,11 +4,13 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"github.com/hoducha/ondemand-go-bootcamp/repositories"
+
+	"github.com/gin-gonic/gin"
 	pokeapi "github.com/mtslzr/pokeapi-go"
 )
 
+// GetPokemonByID returns a handler function that returns a Pokemon by ID
 func GetPokemonByID(repo repositories.PokemonRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := strconv.Atoi(c.Param("id"))
@@ -27,6 +29,7 @@ func GetPokemonByID(repo repositories.PokemonRepository) gin.HandlerFunc {
 	}
 }
 
+// GetPokemonDetailByID returns a handler function that returns a Pokemon detail by ID
 func GetPokemonDetailByID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := strconv.Atoi(c.Param("id"))

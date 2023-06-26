@@ -4,9 +4,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/gin-gonic/gin"
 	"github.com/hoducha/ondemand-go-bootcamp/api"
 	"github.com/hoducha/ondemand-go-bootcamp/repositories"
+
+	"github.com/gin-gonic/gin"
 )
 
 func setupRouter(dataFile string) *gin.Engine {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hoducha/ondemand-go-bootcamp/models"
+
 	"github.com/stretchr/testify/assert"
 )
 
