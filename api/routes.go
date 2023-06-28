@@ -9,10 +9,11 @@ import (
 
 // SetupRoutes sets up the routes for the API
 func SetupRoutes(router *gin.Engine, repo repositories.PokemonRepository) {
+	pokemonHandler := handlers.NewPokemonHandler(repo)
 
 	v1 := router.Group("/v1")
 	{
-		v1.GET("/pokemon/:id", handlers.GetPokemonByID(repo))
-		v1.GET("/pokemon/:id/detail", handlers.GetPokemonDetailByID())
+		v1.GET("/pokemon/all/update-images", pokemonHandler.UpdateImages)
+		v1.GET("/pokemon/:id", pokemonHandler.GetByID)
 	}
 }

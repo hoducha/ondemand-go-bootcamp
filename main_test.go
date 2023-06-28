@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var testDataFile = "pokemon_data.csv"
+var testDataFile = "testdata/pokemon_data.csv"
 
 type PokemonTestSuite struct {
 	suite.Suite
@@ -34,7 +34,7 @@ func (suite *PokemonTestSuite) TestGetPokemonByID() {
 	suite.router.ServeHTTP(w, req)
 
 	assert.Equal(suite.T(), http.StatusOK, w.Code)
-	assert.Equal(suite.T(), "{\"id\":1,\"name\":\"bulbasaur\"}", w.Body.String())
+	assert.Equal(suite.T(), "{\"id\":1,\"name\":\"bulbasaur\",\"image\":\"\"}", w.Body.String())
 }
 
 func (suite *PokemonTestSuite) TestGetPokemonByInvalidID() {

@@ -3,7 +3,6 @@ package repositories
 import (
 	"encoding/csv"
 	"errors"
-	"io"
 	"os"
 	"strconv"
 
@@ -13,27 +12,37 @@ import (
 // PokemonRepository is an interface for getting Pokemon data
 type PokemonRepository interface {
 	GetByID(id int) (*models.Pokemon, error)
+	GetAll() ([]*models.Pokemon)
+	PersistData() error
 }
 
 // CSVRepository is a repository for getting Pokemon data from a CSV file
 type CSVRepository struct {
+	filePath string
 	pokemonData map[int]*models.Pokemon
 }
 
 // NewPokemonRepository returns a new PokemonRepository
 func NewPokemonRepository(filePath string) (PokemonRepository, error) {
+	pokemonData, err := loadData(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CSVRepository{
+		filePath: filePath,
+		pokemonData: pokemonData,
+	}, nil
+}
+
+func loadData(filePath string) (map[int]*models.Pokemon, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	return NewPokemonRepositoryFromReader(file)
-}
-
-// NewPokemonRepositoryFromReader returns a new PokemonRepository from a reader
-func NewPokemonRepositoryFromReader(reader io.Reader) (PokemonRepository, error) {
-	records, err := csv.NewReader(reader).ReadAll()
+	records, err := csv.NewReader(file).ReadAll()
 	if err != nil {
 		return nil, err
 	}
@@ -48,12 +57,48 @@ func NewPokemonRepositoryFromReader(reader io.Reader) (PokemonRepository, error)
 			ID:   id,
 			Name: record[1],
 		}
+		if len(record) > 2 {
+			pokemon.Image = record[2]
+		}
 		pokemonData[pokemon.ID] = pokemon
+	}	
+
+	return pokemonData, nil
+}
+
+// PersistData persists the Pokemon data to the CSV file
+func (r *CSVRepository) PersistData() error {
+	file, err := os.Create(r.filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, pokemon := range r.pokemonData {
+		err := writer.Write([]string{
+			strconv.Itoa(pokemon.ID),
+			pokemon.Name,
+			pokemon.Image,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
-	return &CSVRepository{
-		pokemonData: pokemonData,
-	}, nil
+	return nil
+}
+
+// GetAll returns all Pokemon
+func (r *CSVRepository) GetAll() ([]*models.Pokemon) {
+	pokemons := make([]*models.Pokemon, 0, len(r.pokemonData))
+	for _, p := range r.pokemonData {
+		pokemons = append(pokemons, p)
+	}
+
+	return pokemons
 }
 
 // GetByID returns a Pokemon by ID

@@ -4,46 +4,47 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/hoducha/ondemand-go-bootcamp/api/services"
 	"github.com/hoducha/ondemand-go-bootcamp/repositories"
 
 	"github.com/gin-gonic/gin"
-	pokeapi "github.com/mtslzr/pokeapi-go"
 )
 
-// GetPokemonByID returns a handler function that returns a Pokemon by ID
-func GetPokemonByID(repo repositories.PokemonRepository) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		id, err := strconv.Atoi(c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-			return
-		}
-
-		pokemon, err := repo.GetByID(id)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Pokemon not found"})
-			return
-		}
-
-		c.JSON(http.StatusOK, pokemon)
-	}
+// PokemonHandler is a handler for Pokemon API
+type PokemonHandler struct {
+	service *services.PokemonService
 }
 
-// GetPokemonDetailByID returns a handler function that returns a Pokemon detail by ID
-func GetPokemonDetailByID() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		id, err := strconv.Atoi(c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-			return
-		}
+// NewPokemonHandler creates a new PokemonHandler
+func NewPokemonHandler(repo repositories.PokemonRepository) *PokemonHandler {
+	pokemonService := services.NewPokemonService(repo)
+	return &PokemonHandler{service: pokemonService}
+}
 
-		pokemon, err := pokeapi.Pokemon(strconv.Itoa(id))
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Pokemon detail not found"})
-			return
-		}
-
-		c.JSON(http.StatusOK, pokemon)
+// SetupRoutes sets up routes for Pokemon API
+func (h *PokemonHandler) GetByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
 	}
+
+	pokemon, err := h.service.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Pokemon not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, pokemon)
+}
+
+// UpdateImages fetches the pokemon images using the PokeAPI and updates the repository
+func (h *PokemonHandler) UpdateImages(c *gin.Context) {
+	pokemons, err := h.service.UpdateImages()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating images"})
+		return
+	}
+
+	c.JSON(http.StatusOK, pokemons)
 }
