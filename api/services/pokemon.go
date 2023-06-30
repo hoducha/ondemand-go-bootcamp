@@ -38,3 +38,8 @@ func (s *PokemonService) UpdateImages() ([]*models.Pokemon, error) {
 
 	return pokemons, nil
 }
+
+// FilterByType returns a list of Pokemon filtered by type
+func (s *PokemonService) FilterByType(filterType string, items int, itemsPerWorker int) ([]*models.Pokemon, error) {
+	return s.repo.FilterByType(filterType, items, itemsPerWorker)
+}

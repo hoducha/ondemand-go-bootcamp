@@ -13,7 +13,8 @@ func SetupRoutes(router *gin.Engine, repo repositories.PokemonRepository) {
 
 	v1 := router.Group("/v1")
 	{
-		v1.GET("/pokemon/all/update-images", pokemonHandler.UpdateImages)
+		v1.GET("/pokemon/update-images", pokemonHandler.UpdateImages)
+		v1.GET("/pokemon/filter", pokemonHandler.FilterByType)
 		v1.GET("/pokemon/:id", pokemonHandler.GetByID)
 	}
 }

@@ -48,3 +48,26 @@ func (h *PokemonHandler) UpdateImages(c *gin.Context) {
 
 	c.JSON(http.StatusOK, pokemons)
 }
+
+// FilterByType returns a list of Pokemon filtered by type
+func (h *PokemonHandler) FilterByType(c *gin.Context) {
+	filterType := c.Query("type")
+	items, err := strconv.Atoi(c.Query("items"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid items"})
+		return
+	}
+	itemsPerWorker, err := strconv.Atoi(c.Query("itemsPerWorker"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid itemsPerWorker"})
+		return
+	}
+
+	pokemons, err := h.service.FilterByType(filterType, items, itemsPerWorker)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error filtering by type"})
+		return
+	}
+
+	c.JSON(http.StatusOK, pokemons)
+}
