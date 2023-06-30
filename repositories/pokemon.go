@@ -68,68 +68,101 @@ func loadData(filePath string) (map[int]*models.Pokemon, error) {
 	return pokemonData, nil
 }
 
+// FilterByType returns a list of Pokemon filtered by type (odd or even)
+// The function uses multiple workers to read the CSV file concurrently
 func (r *CSVRepository) FilterByType(filterType string, items int, itemsPerWorker int) ([]*models.Pokemon, error) {
-	if items <= 0 {
-		return nil, errors.New("items must be greater than 0")
-	}
-	if itemsPerWorker <= 0 {
-		return nil, errors.New("itemsPerWorker must be greater than 0")
-	}
-
 	file, err := os.Open(r.filePath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	reader := csv.NewReader(file)
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
 
-	pokemonChan := make(chan *models.Pokemon)
-	workerDone := make(chan bool)
 	numOfWorkers := items / itemsPerWorker
 	if items%itemsPerWorker != 0 {
 		numOfWorkers++
 	}
 
+	fileSize := fileInfo.Size()
+	chunkSize := fileSize / int64(numOfWorkers)
+
+	pokemonChan := make(chan *models.Pokemon, items)
+	workerDone := make(chan bool)
+
 	// Start the worker pool
 	for i := 0; i < numOfWorkers; i++ {
-		go worker(i, reader, filterType, itemsPerWorker, pokemonChan, workerDone)
+		workerReader := csv.NewReader(file)
+		startOffset := int64(i) * chunkSize
+		endOffset := startOffset + chunkSize
+
+		// Skip lines before the start offset
+		if startOffset > 0 {
+			_, err := file.Seek(startOffset, io.SeekStart)
+			if err != nil {
+				return nil, err
+			}
+			line, err := workerReader.Read()
+			if err != nil && err != io.EOF {
+				return nil, err
+			}
+			// Adjust start offset to the beginning of the line
+			if len(line) > 0 {
+				startOffset = startOffset + int64(len(line[0]))
+			}
+		}
+
+		// Adjust end offset if it falls in the middle of a line
+		_, err := file.Seek(endOffset, io.SeekStart)
+		if err != nil {
+			return nil, err
+		}
+		line, _ := workerReader.Read()
+		if len(line) > 0 {
+			endOffset += int64(len(line[0]))
+		}
+
+		// Create a separate CSV reader for each worker
+		workerFile := io.NewSectionReader(file, startOffset, endOffset-startOffset)
+		workerReader = csv.NewReader(workerFile)
+
+		go worker(workerReader, filterType, itemsPerWorker, pokemonChan, workerDone)
 	}
 
 	// Collect valid items from workers
 	validItems := make([]*models.Pokemon, 0)
 	count := 0
 	hasDone := false
-	for {
+	for count < items {
 		select {
 		case <-workerDone:
-			hasDone = true
+			numOfWorkers--
+			if numOfWorkers == 0 {
+				hasDone = true
+			}
 		case pokemon := <-pokemonChan:
 			validItems = append(validItems, pokemon)
 			count++
-			if (count == items) || hasDone {
-				return validItems, nil
-			}
 		default:
 			if hasDone {
 				return validItems, nil
 			}
 		}
-
 	}
+
+	return validItems, nil
 }
 
-func worker(id int, reader *csv.Reader, filterType string, itemsPerWorker int, pokemonChan chan<- *models.Pokemon, workerDone chan<- bool) {
+func worker(reader *csv.Reader, filterType string, itemsPerWorker int, pokemonChan chan<- *models.Pokemon, workerDone chan<- bool) {
 	defer func() {
 		workerDone <- true
 	}()
 
 	count := 0
 	for {
-		if count >= itemsPerWorker {
-			return
-		}
-
 		record, err := reader.Read()
 		if err != nil {
 			if err == io.EOF {
