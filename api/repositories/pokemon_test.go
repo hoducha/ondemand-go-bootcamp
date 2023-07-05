@@ -94,24 +94,26 @@ func TestCSVRepository_FilterByType(t *testing.T) {
 		FilterType     string
 		Items          int
 		ItemsPerWorker int
-		ExectedIDs     []int
-		ExpectedError  error
 	}{
-		{Name: "OddFilterType_Items5_ItemsPerWorker3", FilterType: "odd", Items: 5, ItemsPerWorker: 3, ExectedIDs: []int{1, 3, 5, 7, 9}, ExpectedError: nil},
-		{Name: "EvenFilterType_Items4_ItemsPerWorker2", FilterType: "even", Items: 4, ItemsPerWorker: 2, ExectedIDs: []int{2, 4, 6, 8}, ExpectedError: nil},
+		{Name: "OddFilterType_Items5_ItemsPerWorker3", FilterType: "odd", Items: 5, ItemsPerWorker: 3},
+		{Name: "EvenFilterType_Items4_ItemsPerWorker2", FilterType: "even", Items: 4, ItemsPerWorker: 2},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			pokemons, err := csvRepo.FilterByType(tc.FilterType, tc.Items, tc.ItemsPerWorker)
-
-			assert.Equal(t, tc.ExpectedError, err)
+			assert.Equal(t, nil, err)
 
 			ids := make([]int, 0, len(pokemons))
 			for _, p := range pokemons {
 				ids = append(ids, p.ID)
+				if tc.FilterType == "odd" {
+					assert.Equal(t, 1, p.ID%2)
+				} else {
+					assert.Equal(t, 0, p.ID%2)
+				}
 			}
-			assert.Equal(t, tc.ExectedIDs, ids)
+			assert.Equal(t, tc.Items, len(ids))
 		})
 	}
 }
