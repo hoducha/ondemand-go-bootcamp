@@ -6,14 +6,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hoducha/ondemand-go-bootcamp/models"
-	"github.com/hoducha/ondemand-go-bootcamp/repositories"
+	"github.com/hoducha/ondemand-go-bootcamp/api/models"
+	repos "github.com/hoducha/ondemand-go-bootcamp/api/repositories"
 
 	"github.com/stretchr/testify/assert"
 )
 
-var testDataFile = "../testdata/pokemon_data.csv"
-var mockDataFile = "../testdata/pokemon_data_test.csv"
+var testDataFile = "../../testdata/pokemon_data.csv"
+var mockDataFile = "../../testdata/pokemon_data_test.csv"
 
 // TestCSVRepository_GetByID tests the GetByID method of CSVRepository
 func TestCSVRepository_GetByID(t *testing.T) {
@@ -77,12 +77,12 @@ func TestCSVRepository_PersistData(t *testing.T) {
 }
 
 // createTestRepository creates a CSVRepository for testing
-func createTestRepository(t *testing.T) (repositories.PokemonRepository, func()) {
+func createTestRepository(t *testing.T) (repos.PokemonRepository, func()) {
 	// Copy the mock data file to a temporary location
 	tmpFile, err := copyFile(testDataFile, mockDataFile)
 	assert.NoError(t, err)
 
-	repo, err := repositories.NewPokemonRepository(tmpFile)
+	repo, err := repos.NewPokemonRepository(tmpFile)
 	assert.NoError(t, err)
 
 	cleanup := func() {

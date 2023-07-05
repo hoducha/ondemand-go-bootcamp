@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/hoducha/ondemand-go-bootcamp/models"
+	"github.com/hoducha/ondemand-go-bootcamp/api/models"
 )
 
 // PokemonRepository is an interface for getting Pokemon data
@@ -129,7 +129,7 @@ func (r *CSVRepository) FilterByType(filterType string, items int, itemsPerWorke
 		workerFile := io.NewSectionReader(file, startOffset, endOffset-startOffset)
 		workerReader = csv.NewReader(workerFile)
 
-		go worker(workerReader, filterType, itemsPerWorker, pokemonChan, workerDone)
+		go worker(workerReader, filterType, pokemonChan, workerDone)
 	}
 
 	// Collect valid items from workers
@@ -156,7 +156,7 @@ func (r *CSVRepository) FilterByType(filterType string, items int, itemsPerWorke
 	return validItems, nil
 }
 
-func worker(reader *csv.Reader, filterType string, itemsPerWorker int, pokemonChan chan<- *models.Pokemon, workerDone chan<- bool) {
+func worker(reader *csv.Reader, filterType string, pokemonChan chan<- *models.Pokemon, workerDone chan<- bool) {
 	defer func() {
 		workerDone <- true
 	}()

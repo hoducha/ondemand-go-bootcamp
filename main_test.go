@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/hoducha/ondemand-go-bootcamp/repositories"
+	"github.com/hoducha/ondemand-go-bootcamp/api/repositories"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

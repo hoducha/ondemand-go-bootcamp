@@ -2,13 +2,13 @@ package api
 
 import (
 	"github.com/hoducha/ondemand-go-bootcamp/api/handlers"
-	"github.com/hoducha/ondemand-go-bootcamp/repositories"
+	repos "github.com/hoducha/ondemand-go-bootcamp/api/repositories"
 
 	"github.com/gin-gonic/gin"
 )
 
 // SetupRoutes sets up the routes for the API
-func SetupRoutes(router *gin.Engine, repo repositories.PokemonRepository) {
+func SetupRoutes(router *gin.Engine, repo repos.PokemonRepository) {
 	pokemonHandler := handlers.NewPokemonHandler(repo)
 
 	v1 := router.Group("/v1")

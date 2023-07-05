@@ -4,25 +4,31 @@ import (
 	"net/http"
 	"strconv"
 
+	repos "github.com/hoducha/ondemand-go-bootcamp/api/repositories"
 	"github.com/hoducha/ondemand-go-bootcamp/api/services"
-	"github.com/hoducha/ondemand-go-bootcamp/repositories"
 
 	"github.com/gin-gonic/gin"
 )
 
 // PokemonHandler is a handler for Pokemon API
-type PokemonHandler struct {
-	service *services.PokemonService
+type PokemonHandler interface {
+	GetByID(c *gin.Context)
+	UpdateImages(c *gin.Context)
+	FilterByType(c *gin.Context)
+}
+
+type pokemonHandler struct {
+	service services.PokemonService
 }
 
 // NewPokemonHandler creates a new PokemonHandler
-func NewPokemonHandler(repo repositories.PokemonRepository) *PokemonHandler {
+func NewPokemonHandler(repo repos.PokemonRepository) PokemonHandler {
 	pokemonService := services.NewPokemonService(repo)
-	return &PokemonHandler{service: pokemonService}
+	return &pokemonHandler{service: pokemonService}
 }
 
 // SetupRoutes sets up routes for Pokemon API
-func (h *PokemonHandler) GetByID(c *gin.Context) {
+func (h *pokemonHandler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
@@ -39,7 +45,7 @@ func (h *PokemonHandler) GetByID(c *gin.Context) {
 }
 
 // UpdateImages fetches the pokemon images using the PokeAPI and updates the repository
-func (h *PokemonHandler) UpdateImages(c *gin.Context) {
+func (h *pokemonHandler) UpdateImages(c *gin.Context) {
 	pokemons, err := h.service.UpdateImages()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating images"})
@@ -50,7 +56,7 @@ func (h *PokemonHandler) UpdateImages(c *gin.Context) {
 }
 
 // FilterByType returns a list of Pokemon filtered by type
-func (h *PokemonHandler) FilterByType(c *gin.Context) {
+func (h *pokemonHandler) FilterByType(c *gin.Context) {
 	filterType := c.Query("type")
 	items, err := strconv.Atoi(c.Query("items"))
 	if err != nil {
