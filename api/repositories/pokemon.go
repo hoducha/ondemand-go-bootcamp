@@ -10,6 +10,11 @@ import (
 	"github.com/hoducha/ondemand-go-bootcamp/api/models"
 )
 
+// Define errors
+var (
+	ErrPokemonNotFound = errors.New("Pokemon not found")
+)
+
 // PokemonRepository is an interface for getting Pokemon data
 type PokemonRepository interface {
 	GetByID(id int) (*models.Pokemon, error)
@@ -230,7 +235,7 @@ func (r *CSVRepository) GetAll() []*models.Pokemon {
 func (r *CSVRepository) GetByID(id int) (*models.Pokemon, error) {
 	pokemon, ok := r.pokemonData[id]
 	if !ok {
-		return nil, errors.New("Pokemon not found")
+		return nil, ErrPokemonNotFound
 	}
 
 	return pokemon, nil

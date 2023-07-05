@@ -1,37 +1,43 @@
 package repositories_test
 
 import (
-	"encoding/csv"
-	"io"
+	"fmt"
 	"os"
 	"testing"
 
-	"github.com/hoducha/ondemand-go-bootcamp/api/models"
 	repos "github.com/hoducha/ondemand-go-bootcamp/api/repositories"
 
 	"github.com/stretchr/testify/assert"
 )
 
-var testDataFile = "../../testdata/pokemon_data.csv"
-var mockDataFile = "../../testdata/pokemon_data_test.csv"
+var testFilename = "../../testdata/pokemon_data_test.csv"
+var numberOfPokemons = 20
 
 // TestCSVRepository_GetByID tests the GetByID method of CSVRepository
 func TestCSVRepository_GetByID(t *testing.T) {
 	repo, cleanup := createTestRepository(t)
 	defer cleanup()
 
-	// Test case: Existing Pokemon
-	pokemon, err := repo.GetByID(1)
-	assert.NoError(t, err)
-	assert.NotNil(t, pokemon)
-	assert.Equal(t, 1, pokemon.ID)
-	assert.Equal(t, "bulbasaur", pokemon.Name)
+	testcases := []struct {
+		ID            int
+		ExpectedName  string
+		ExpectedError error
+	}{
+		{ID: 10, ExpectedName: "pokemon10", ExpectedError: nil},
+		{ID: numberOfPokemons + 1, ExpectedName: "", ExpectedError: repos.ErrPokemonNotFound},
+	}
 
-	// Test case: Non-existing Pokemon
-	pokemon, err = repo.GetByID(1000)
-	assert.Error(t, err)
-	assert.Nil(t, pokemon)
-	assert.EqualError(t, err, "Pokemon not found")
+	for _, tc := range testcases {
+		t.Run(fmt.Sprintf("ID=%d", tc.ID), func(t *testing.T) {
+			pokemon, err := repo.GetByID(tc.ID)
+
+			assert.Equal(t, tc.ExpectedError, err)
+			if err == nil {
+				assert.Equal(t, tc.ExpectedName, pokemon.Name)
+			}
+		})
+	}
+
 }
 
 // TestCSVRepository_GetAll tests the GetAll method of CSVRepository
@@ -40,15 +46,7 @@ func TestCSVRepository_GetAll(t *testing.T) {
 	defer cleanup()
 
 	pokemons := repo.GetAll()
-	assert.Len(t, pokemons, 3)
-
-	expectedPokemons := []*models.Pokemon{
-		{ID: 1, Name: "bulbasaur"},
-		{ID: 2, Name: "ivysaur"},
-		{ID: 3, Name: "venusaur"},
-	}
-
-	assert.ElementsMatch(t, expectedPokemons, pokemons)
+	assert.Len(t, pokemons, numberOfPokemons)
 }
 
 // TestCSVRepository_PersistData tests the PersistData method of CSVRepository
@@ -56,60 +54,98 @@ func TestCSVRepository_PersistData(t *testing.T) {
 	repo, cleanup := createTestRepository(t)
 	defer cleanup()
 
+	pokemonID := 2
+
 	// Update a Pokemon's name
-	pokemon, _ := repo.GetByID(2)
+	pokemon, _ := repo.GetByID(pokemonID)
 	pokemon.Name = "updated_name"
+
+	fmt.Println(pokemon)
+	fmt.Println(repo.GetAll()[pokemonID])
 
 	err := repo.PersistData()
 	assert.NoError(t, err)
 
 	// Verify the updated data in the file
-	file, err := os.Open(mockDataFile)
-	assert.NoError(t, err)
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
+	newRepo, err := repos.NewPokemonRepository(testFilename)
 	assert.NoError(t, err)
 
 	// Verify the updated Pokemon's name
-	assert.Equal(t, "updated_name", records[1][1])
+	newPokemon, _ := newRepo.GetByID(pokemonID)
+	assert.Equal(t, "updated_name", newPokemon.Name)
 }
 
-// createTestRepository creates a CSVRepository for testing
-func createTestRepository(t *testing.T) (repos.PokemonRepository, func()) {
-	// Copy the mock data file to a temporary location
-	tmpFile, err := copyFile(testDataFile, mockDataFile)
+func TestCSVRepository_FilterByType(t *testing.T) {
+	// Create a temporary test CSV file
+	filePath := "../../testdata/pokemon_data_test.csv"
+	defer os.Remove(filePath)
+
+	// Write test data to the CSV file
+	err := createTestData(filePath, 100)
 	assert.NoError(t, err)
 
-	repo, err := repos.NewPokemonRepository(tmpFile)
+	repo, err := repos.NewPokemonRepository(filePath)
+	assert.NoError(t, err)
+	csvRepo, ok := repo.(*repos.CSVRepository)
+	assert.True(t, ok)
+
+	testCases := []struct {
+		Name           string
+		FilterType     string
+		Items          int
+		ItemsPerWorker int
+		ExectedIDs     []int
+		ExpectedError  error
+	}{
+		{Name: "OddFilterType_Items5_ItemsPerWorker3", FilterType: "odd", Items: 5, ItemsPerWorker: 3, ExectedIDs: []int{1, 3, 5, 7, 9}, ExpectedError: nil},
+		{Name: "EvenFilterType_Items4_ItemsPerWorker2", FilterType: "even", Items: 4, ItemsPerWorker: 2, ExectedIDs: []int{2, 4, 6, 8}, ExpectedError: nil},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			pokemons, err := csvRepo.FilterByType(tc.FilterType, tc.Items, tc.ItemsPerWorker)
+
+			assert.Equal(t, tc.ExpectedError, err)
+
+			ids := make([]int, 0, len(pokemons))
+			for _, p := range pokemons {
+				ids = append(ids, p.ID)
+			}
+			assert.Equal(t, tc.ExectedIDs, ids)
+		})
+	}
+}
+
+// createTestRepository creates a PokemonRepository with test data
+func createTestRepository(t *testing.T) (repos.PokemonRepository, func()) {
+	err := createTestData(testFilename, numberOfPokemons)
+	assert.NoError(t, err)
+
+	repo, err := repos.NewPokemonRepository(testFilename)
 	assert.NoError(t, err)
 
 	cleanup := func() {
-		os.Remove(tmpFile)
+		os.Remove(testFilename)
 	}
 
 	return repo, cleanup
 }
 
-// copyFile copies a file to a destination path and returns the destination path
-func copyFile(src, dst string) (string, error) {
-	in, err := os.Open(src)
+// createTestData creates a CSV file with test data
+func createTestData(filePath string, count int) error {
+	file, err := os.Create(filePath)
 	if err != nil {
-		return "", err
+		return err
 	}
-	defer in.Close()
+	defer file.Close()
 
-	out, err := os.Create(dst)
-	if err != nil {
-		return "", err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	if err != nil {
-		return "", err
+	for i := 1; i <= count; i++ {
+		line := fmt.Sprintf("%d,pokemon%d\n", i, i)
+		_, err = file.WriteString(line)
+		if err != nil {
+			return err
+		}
 	}
 
-	return dst, nil
+	return nil
 }
